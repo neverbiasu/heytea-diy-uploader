@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## HeyTea DIY Uploader
 
-## Getting Started
+Full-stack reference project that mirrors the unofficial HeyTea DIY image workflow. The Next.js App Router frontend keeps the UI minimal and human, while a separate Express proxy reproduces the Node script shared in the brief.
 
-First, run the development server:
+### Main Features
+
+- Sign builder that hashes `user_main_id` with the official salt to produce `sign`/`timestamp` pairs.
+- Client-side validation for 596×832 PNG files before upload.
+- Express proxy that mirrors `/api`, `/upload`, and the newly added `/auth/sms/*` endpoints (SMS code + login), including automatic port discovery.
+- Lightweight API console for sending arbitrary HeyTea requests without leaving the page.
+- Minimal SMS 登录面板：输入手机号获取验证码，自动 AES 加密并向官方接口请求 Token。
+
+### Prerequisites
+
+- Node.js 18.18+ (Next.js 16 requirement)
+- npm 9+
+
+### Environment
+
+Copy the sample file and adjust as needed:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Key values:
+
+- `NEXT_PUBLIC_PROXY_BASE_URL`: Browser-side proxy URL (defaults to `http://localhost:5969`).
+- `NEXT_PUBLIC_HEYTEA_SMS_AREA_CODE`: Country/area code shown in the UI (defaults to `86`).
+- `PROXY_PORT`: Preferred port for the Express proxy.
+- `ALLOWED_ORIGINS`: Comma-separated list of origins allowed to call the proxy.
+- `HEYTEA_SMS_AREA_CODE`: Server-side area code when forwarding SMS requests.
+- `HEYTEA_AES_KEY` & `HEYTEA_AES_IV`: **Required** for短信登录; 16-byte AES-128-CBC key/IV that match the official script. Keep them private. The proxy also accepts `LOGIN_ENCRYPT_KEY`/`LOGIN_ENCRYPT_IV` for compatibility with原脚本.
+- `HEYTEA_DEVICE_ID` (optional): Custom device identifier forwarded during login.
+- `HEYTEA_USER_AGENT` (optional): Override the default proxy User-Agent string.
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run in Development
+
+`npm run dev` launches both servers with `concurrently`:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Next.js dev server → http://localhost:3000
+- Express proxy → http://localhost:5969 (auto-shifts if the port is busy)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Lint, Build, Start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+npm run start
+```
 
-## Learn More
+The production `start` script again keeps the proxy and Next.js server alive in parallel.
 
-To learn more about Next.js, take a look at the following resources:
+### Proxy Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `POST /api`: forwards generic HeyTea API calls; pass `{ url, method, headers, params, body }`.
+- `POST /auth/sms/send`: encrypts手机号并调用官方验证码接口，可通过 body 覆盖 `areaCode` 或追加参数。
+- `POST /auth/sms/login`: 使用手机号+验证码换取 Token，响应直接回传官方数据。
+- `POST /upload`: wraps `multipart/form-data` upload to `https://app-go.heytea.com/api/service-cps/user/diy` with the required `sign`, `t`, `width`, `height`, and `token` fields.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Refer to `src/app/page.tsx` for the request shapes used by the UI.
