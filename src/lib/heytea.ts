@@ -22,6 +22,20 @@ export function buildUploadSignature(userMainId: string, now = Date.now()) {
 }
 
 export function getProxyBaseUrl() {
+  // Allow overriding the proxy base via NEXT_PUBLIC_PROXY_BASE at build/deploy time.
+  // This makes it easy to deploy the frontend to Vercel and point to a separately
+  // hosted proxy service without changing source code.
+  try {
+    // `process.env.NEXT_PUBLIC_PROXY_BASE` is inlined by Next.js during build.
+    // The check for `typeof process !== 'undefined'` keeps this safe in browser context.
+     
+    const env = typeof process !== "undefined" ? (process.env as any)?.NEXT_PUBLIC_PROXY_BASE : undefined;
+    if (env && typeof env === "string" && env.trim().length > 0) {
+      return env.trim();
+    }
+  } catch (e) {
+    // ignore and fall back to default
+  }
   return DEFAULT_PROXY_BASE;
 }
 
